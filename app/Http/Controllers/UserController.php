@@ -8,6 +8,15 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    public function showProfile(User $user)
+    {
+        // return $user->posts()->latest()->get();
+        return view('profile-posts', [
+            'username' => $user->username,
+            'posts' => $user->posts()->latest()->get(),
+            'post_count' => $user->posts()->count(),
+        ]);
+    }
 
     public function logout()
     {

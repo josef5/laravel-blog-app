@@ -6,6 +6,8 @@ use App\Models\Post;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Auth;
+
 class PostController extends Controller
 {
     public function viewSinglePost(Post $post)
@@ -39,5 +41,36 @@ class PostController extends Controller
         } */
 
         return view('create-post');
+    }
+
+    public function showEditForm(Post $post)
+    {
+        return view('edit-post', ['post' => $post]);
+    }
+
+    public function actuallyUpdate(Post $post, Request $request)
+    {
+        $incomingFields = $request->validate([
+            'title' => 'required',
+            'body' => 'required'
+        ]);
+
+        $incomingFields['title'] = strip_tags($incomingFields['title']);
+        $incomingFields['body'] = strip_tags($incomingFields['body']);
+
+        $post->update($incomingFields);
+
+        return back()->with('success', 'Post updated successfully');
+    }
+
+    public function deletePost(Request $request, Post $post)
+    {
+        /* if ($request->user()->cannot('delete', $post)) {
+            return 'You are not authorized to delete this post';
+        } */
+
+        $post->delete();
+
+        return redirect('/')->with('success', 'Post deleted successfully');
     }
 }
