@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -21,6 +23,13 @@ class User extends Authenticatable
         'email',
         'password',
     ];
+
+    protected function avatar(): Attribute
+    {
+        return Attribute::make(get: function ($value) {
+            return $value ? '/storage/avatars/' . $value : '/fallback-avatar.jpg';
+        });
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -43,6 +52,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function feedPosts()
+    {
+        return $this->hasManyThrough(Post::class, Follow::class, 'user_id', 'user_id', 'id', 'followed_user_id');
+    }
+
+    public function followers()
+    {
+        return $this->hasMany(Follow::class, 'followed_user_id');
+    }
+
+    public function followingTheseUsers()
+    {
+        return $this->hasMany(Follow::class, 'user_id');
     }
 
     public function posts()
