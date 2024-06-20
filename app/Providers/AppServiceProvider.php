@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Policies\PostPolicy;
 use App\Models\Post;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,5 +28,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('visitAdminPages', function ($user) {
             return $user->is_admin === 1;
         });
+
+        Paginator::useBootstrapFive();
     }
 }
