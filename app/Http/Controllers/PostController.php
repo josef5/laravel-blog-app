@@ -10,6 +10,18 @@ use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
+    public function search($term)
+    {
+        $posts = Post::search($term)->get();
+        $posts->load('user:id,username,avatar');
+
+        return $posts;
+
+        /* $posts = Post::where('title', 'like', "%$term%")->get();
+
+        return view('search-results', ['posts' => $posts]); */
+    }
+
     public function viewSinglePost(Post $post)
     {
         $post['body'] = strip_tags(Str::markdown($post->body), '<p><ul><ol><li><strong><em><h2><h3><br>');
