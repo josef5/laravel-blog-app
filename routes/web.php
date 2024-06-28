@@ -1,9 +1,12 @@
 <?php
 
+use App\Events\ChatMessage;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\PostController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 // User routes
 Route::get('/', [UserController::class, 'showCorrectHomepage'])->name('login');
@@ -27,12 +30,44 @@ Route::put('/post/{post}', [PostController::class, 'actuallyUpdate'])->middlewar
 Route::get('/search/{term}', [PostController::class, 'search']);
 
 // Profile routes
-Route::get('/profile/{user:username}', [UserController::class, 'showProfile']); //->middleware('mustBeLoggedIn');
+Route::get('/profile/{user:username}', [UserController::class, 'showProfile'])->middleware('mustBeLoggedIn');
 Route::get('/profile/{user:username}/followers', [UserController::class, 'showProfileFollowers'])->middleware('mustBeLoggedIn');
 Route::get('/profile/{user:username}/following', [UserController::class, 'showProfileFollowing'])->middleware('mustBeLoggedIn');
-Route::post('/profile/{user}', [UserController::class, 'updateProfile'])->middleware('mustBeLoggedIn');
+
+Route::middleware('cache.headers:public;max_age=20;etag')->group(function () {
+  Route::get('/profile/{user:username}/raw', [UserController::class, 'showProfileRaw'])->middleware('mustBeLoggedIn');
+  Route::get('/profile/{user:username}/followers/raw', [UserController::class, 'showProfileFollowersRaw'])->middleware('mustBeLoggedIn');
+  Route::get('/profile/{user:username}/following/raw', [UserController::class, 'showProfileFollowingRaw'])->middleware('mustBeLoggedIn');
+});
+
+// Route::post('/profile/{user}', [UserController::class, 'updateProfile'])->middleware('mustBeLoggedIn');
 
 // Admin routes
 Route::get('/admins-only', function () {
   return 'Only admins should see this page';
 })->middleware('can:visitAdminPages');
+
+// Chat routes
+Route::post('/send-chat-message', function (Request $request) {
+  Log::info('Chat message received: ' . $request->textvalue);
+
+  $formFields = $request->validate([
+    'textvalue' => 'required'
+  ]);
+
+  if (!trim(strip_tags($formFields['textvalue']))) {
+    return response()->noContent();
+  }
+
+  broadcast(
+    new ChatMessage(
+      [
+        'username' => auth()->user()->username,
+        'textvalue' => strip_tags($request->textvalue),
+        'avatar' => auth()->user()->avatar
+      ]
+    )
+  )->toOthers();
+
+  return response()->noContent();
+})->middleware('mustBeLoggedIn');
