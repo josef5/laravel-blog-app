@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendNewPostEmail;
 use App\Models\Post;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class PostController extends Controller
 {
@@ -16,10 +18,6 @@ class PostController extends Controller
         $posts->load('user:id,username,avatar');
 
         return $posts;
-
-        /* $posts = Post::where('title', 'like', "%$term%")->get();
-
-        return view('search-results', ['posts' => $posts]); */
     }
 
     public function viewSinglePost(Post $post)
@@ -43,7 +41,35 @@ class PostController extends Controller
 
         $newPost = Post::create($incomingFields);
 
+        dispatch(new SendNewPostEmail([
+            'sendTo' => auth()->user()->email,
+            'title' => $newPost->title,
+            'name' => auth()->user()->username
+        ]));
+
         return redirect("/post/{$newPost->id}")->with('success', 'Post created successfully');
+    }
+
+    public function storeNewPostApi(Request $request)
+    {
+        $incomingFields = $request->validate([
+            'title' => 'required',
+            'body' => 'required'
+        ]);
+
+        $incomingFields['title'] = strip_tags($incomingFields['title']);
+        $incomingFields['body'] = strip_tags($incomingFields['body']);
+        $incomingFields['user_id'] = auth()->id();
+
+        $newPost = Post::create($incomingFields);
+
+        dispatch(new SendNewPostEmail([
+            'sendTo' => auth()->user()->email,
+            'title' => $newPost->title,
+            'name' => auth()->user()->username
+        ]));
+
+        return $newPost->id;
     }
 
     public function showCreateForm()
@@ -77,12 +103,15 @@ class PostController extends Controller
 
     public function deletePost(Request $request, Post $post)
     {
-        /* if ($request->user()->cannot('delete', $post)) {
-            return 'You are not authorized to delete this post';
-        } */
-
         $post->delete();
 
         return redirect('/')->with('success', 'Post deleted successfully');
+    }
+
+    public function deletePostApi(Request $request, Post $post)
+    {
+        $post->delete();
+
+        return true;
     }
 }
